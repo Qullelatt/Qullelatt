@@ -1,0 +1,8 @@
+#$vpn = Get-VpnConnection -Name "Rozetka"
+ #   if ( -not ( $vpn ) )
+#{
+    Add-VpnConnection -Name "Rozetka" -ServerAddress "lama.rozetka.com.ua" -TunnelType "L2tp" -L2tpPsk "KhebdnqMSgxko4B" -UseWinlogonCredential -Force -RememberCredential
+    New-Item -Path "HKCU:\Software\Microsoft\VPN"
+	New-ItemProperty -Path "HKCU:\Software\Microsoft\VPN" -Name AutoCreate -Value 1 -PropertyType String
+
+#}
