@@ -1,0 +1,83 @@
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+$Form = New-Object System.Windows.Forms.Form
+$Form.ClientSize = New-Object System.Drawing.Point(400, 410)
+$Form.text = "Task Scheduler"
+$Form.TopMost = $false
+
+$TextBox1 = New-Object System.Windows.Forms.TextBox
+$TextBox1.Multiline = $false
+$TextBox1.width = 163
+$TextBox1.height = 20
+$TextBox1.location = New-Object System.Drawing.Point(10, 20)
+$TextBox1.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+
+$Button1 = New-Object System.Windows.Forms.Button
+$Button1.text = "Get Task List"
+$Button1.width = 106
+$Button1.height = 30
+$Button1.location = New-Object System.Drawing.Point(182, 12)
+$Button1.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+
+$Button3 = New-Object System.Windows.Forms.Button
+$Button3.text = "Log"
+$Button3.width = 90
+$Button3.height = 30
+$Button3.location = New-Object System.Drawing.Point(300, 12)
+$Button3.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+
+$ListBox = New-Object System.Windows.Forms.ListBox
+$ListBox.width = 350
+$ListBox.height = 300
+$ListBox.location = New-Object System.Drawing.Point(10, 60)
+
+$Button2 = New-Object System.Windows.Forms.Button
+$Button2.text = "Run Selected Task"
+$Button2.width = 150
+$Button2.height = 30
+$Button2.location = New-Object System.Drawing.Point(10, 370)
+$Button2.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+$Button2.Add_Click({
+    $selectedTask = $ListBox.SelectedItem
+    if ($selectedTask) {
+        $serverName = $TextBox1.Text
+        Invoke-Command -ComputerName $serverName -ScriptBlock {
+            param($taskName)
+            Start-ScheduledTask -TaskName $taskName
+        } -ArgumentList $selectedTask
+    }
+})
+
+$Button1.Add_Click({
+    $serverName = $TextBox1.Text
+    $taskNameFilter = "Import*"
+    if ($serverName -ne "") {
+        $tasks = Get-ScheduledTask -CimSession $serverName | Where-Object { $_.TaskName -like $taskNameFilter }
+        $ListBox.Items.Clear()
+        foreach ($task in $tasks) {
+            $ListBox.Items.Add($task.TaskName)
+        }
+    }
+})
+
+$Button3.Add_Click({
+    $serverName = $TextBox1.Text
+    if ($serverName -ne "") {
+        $filePath = "\\$serverName\c$\scripts\import.log"
+        if (Test-Path $filePath) {
+            Invoke-Item $filePath
+        }
+    }
+})
+
+
+
+
+$Form.Controls.Add($TextBox1)
+$Form.Controls.Add($Button1)
+$Form.Controls.Add($ListBox)
+$Form.Controls.Add($Button2)
+$Form.Controls.Add($Button3)
+
+$Form.ShowDialog()
