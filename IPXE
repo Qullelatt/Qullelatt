@@ -1,0 +1,230 @@
+1. ПК при завантаженні має звертатися до некст-сервера 10.0.4.47
+2. Завантажити по tftp файл ipxe64.efi, який знаходиться на ansion в  /diskless
+3. Після цього ПК завантажує файл menu.ipxe та два скрипти які прописані в в цьому ж menu.ipxe, а саме boot.ipxe і boot.ipxe.cfg
+4. Приклад працюючиш скриптів нижче:
+
+5. Скрипт boot.ipxe дивиться на МАС ПК, обрізає всі ":" з МАС адреси та біжить шукати конфіг під цей МАС в /diskless/ipxe.cfg
+
+6. В boot.ipxe.cfg об'явлено перемінні ipxe.cfg - папка де шукати конфіги для тонких, menu-url - основне меню
+
+7. Якщо в папці /diskless/ipxe.cfg/ буде конфіг з маком ПК який завантажується типу  /diskless/ipxe.cfg/00505680485d то ПК піде завантажувати той конфіг який відповідає його МАС адресу, якщо конфігу не має, або конфіг не може виконатися то управління надається основному меню menu.ipxe
+
+8. /diskless/ktk.png - картинка яка відображається на головному меню
+
+ansion /diskless # cat boot.ipxe.cfg
+                                                #!ipxe
+ 
+                                                set boot-dir ipxe.cfg
+                                                set menu-url menu.ipxe
+                                                set nfs-server 10.0.4.47
+ansion /diskless # cat boot.ipxe
+                                                #!ipxe
+ 
+                                                # Boot <boot-url>/<boot-dir>/mac-010203040506.ipxe if script is present
+                                                chain --replace --autofree ${boot-dir}/${mac:hexraw}
+                                                #chain --replace --autofree ${boot-dir}/01-${mac:hexraw} ||
+                                                # chain --replace --autofree ${boot-dir}/01-${mac:hexraw} ||
+ansion /diskless # cat menu.ipxe
+#!ipxe
+ 
+chain --autofree boot.ipxe.cfg ||
+chain --autofree boot.ipxe ||
+ 
+login || goto start
+iseq ${username} admin || goto menu-os
+iseq ${password} ПарольРибаМеч|| goto menu-os
+console --x 1024 --y 768
+console --picture ktk.png
+colour --basic 0 7
+cpair --foreground 7 0
+ 
+# Setup some basic convenience variables
+set menu-timeout 5000
+set submenu-timeout ${menu-timeout}
+ 
+# Ensure we have menu-default set to something
+isset ${menu-default} || set menu-default winpe
+ 
+############################ MAIN MENU ####################################################
+:start
+menu Russkiy voyennyy korabl idi na x*y!
+item
+item --gap -- -------------------------------- INSTALL OS / BOOT Live CD -----------------------
+item --key 1 Install-Windows-SCCM               [1] Install-Windows-SCCM
+item --key 2 Install_Debian                     [2] Install Debian 11.3
+item --key 3 Install_CentOS                     [3] Install CentOS 8
+item --key 4 Install_Ubuntu                     [4] Install Ubuntu
+item --key 5 Acronis_Disk_Director              [5] Acronis Disk Director
+item --key 6 Acronis_True_Image                 [6] Acronis True Image
+item --key 7 SystemRescueCd                     [7] SystemRescueCd
+item --key 8 Install-ESXi-6.7.0                 [8] Install-ESXi-6.7.0
+item --key 9 Install-ESXi-6.7.0-HPE             [9] Install-ESXi-6.7.0-HPE
+item --key 10 Install-ESXi-7.0.2                [10]Install-ESXi-7.0.2
+item --key 11 Install-ESXi-7.0.2-HPE            [11]Install-ESXi-7.0.2-HPE
+item --gap -- ---------------------------------------- Advanced ---------------------------------
+item --key c config                             [c] Configure settings
+item --key s shell                              [s] Enter iPXE shell
+isset ${legacy} && item --key l local           [l] Boot from local disk || ###
+item --key r reboot                             [r] Restart
+item --key p poweroff                           [p] Power Off
+item --key e exit                               [e] Exit (boot local disk)
+choose --default winpe --timeout 30000 target && goto ${target}
+ 
+############################## Advanced ####################################################
+ 
+:shell
+echo Type exit to get the back to the menu
+shell
+set menu-timeout 0
+goto start
+ 
+:failed
+echo Booting failed, dropping to shell
+goto shell
+ 
+:local
+sanboot --no-describe --drive 0x80 || goto failed
+goto start
+ 
+:reboot
+reboot
+ 
+:poweroff
+poweroff
+ 
+:exit
+exit
+ 
+:cancel
+echo You cancelled the menu, dropping you to a shell
+ 
+:config
+config
+goto start
+ 
+:back
+set submenu-timeout 0
+clear submenu-default
+goto start
+ 
+################################# BOOT ################################################
+ 
+###########Boot WDS MDT.pup.local################
+:OLD_WDS
+echo WDS
+set wds-server 10.0.4.15
+set netX/next-server ${wds-server}
+chain tftp://${wds-server}/boot\x64\wdsmgfw.efi
+#################################################
+ 
+################Boot WDS sccm.pup.local#########################################
+:Install-Windows-SCCM
+echo Install-Windows-SCCM
+set wds-server 10.0.5.10
+set netX/next-server ${wds-server}
+chain tftp://${wds-server}/boot\x64\wdsmgfw.efi
+################################################################################
+ 
+################Install_Debian##################################################
+:Install_Debian
+echo Install Debian 11.3
+set url http://debian.mirror.constant.com/dists/Debian11.3/main/installer-amd64/current/images/netboot/debian-installer/amd64
+kernel linux initrd=initrd.gz
+initrd ${url}/initrd.gz
+boot
+#################################################################################
+ 
+#####################Install_CentOS#############################################
+:Install_CentOS
+echo Install CentOS 8
+set url http://mirror.centos.org/centos/8/BaseOS/x86_64/os/images/pxeboot/
+set base http://mirror.centos.org/centos/8/BaseOS/x86_64/os
+kernel vmlinuz initrd=initrd.img repo=${base}
+initrd ${url}/initrd.img
+boot
+#################################################################################
+ 
+######################Install_Ubuntu##############################################
+:Install_Ubuntu
+echo Install Ubuntu
+set url http://ubuntu.mirror.constant.com/dists/focal/main/installer-amd64/current/legacy-images/netboot/ubuntu-installer/amd64/
+kernel linux initrd=initrd.gz
+initrd ${url}/initrd.gz
+boot
+ 
+#########################Acronis_Disk_Director###################################
+:Acronis_Disk_Director
+echo Acronis Disk Director 12.5
+kernel wimboot
+#################################################################################
+##initrd ipxe_images/Acronis_Disk_Director/Boot/BCD                     BCD     #
+#initrd ipxe_images/Acronis_Disk_Director/Boot/boot.sdi                boot.sdi #
+#initrd ipxe_images/Acronis_Disk_Director/sources/boot.wim             boot.wim #
+#################################################################################
+initrd http://sccmpxe.local/Acronis_Disk_Director/Boot/BCD              BCD
+initrd http://sccmpxe.local/Acronis_Disk_Director/Boot/boot.sdi         boot.sdi
+initrd http://sccmpxe.local/Acronis_Disk_Director/sources/boot.wim      boot.wim
+boot
+#################################################################################
+ 
+#########################Acronis_True_Image######################################
+:Acronis_True_Image
+echo Acronis True Image
+kernel wimboot
+#################################################################################
+#initrd ipxe_images/AcronisBootablePEMedia/Boot/BCD              BCD            #
+#initrd ipxe_images/AcronisBootablePEMedia/Boot/boot.sdi         boot.sdi       #
+#initrd ipxe_images/AcronisBootablePEMedia/sources/boot.wim      boot.wim       #
+#################################################################################
+initrd http://sccmpxe.local/AcronisBootablePEMedia/Boot/BCD             BCD
+initrd http://sccmpxe.local/AcronisBootablePEMedia/Boot/boot.sdi        boot.sdi
+initrd http://sccmpxe.local/AcronisBootablePEMedia/sources/boot.wim     boot.wim
+boot
+#################################################################################
+ 
+##########################SystemRescueCd#########################################
+:SystemRescueCd
+echo SystemRescueCd
+#########################################################################################################
+#set base /ipxe_images/systemrescue-9.01                                                                #
+#kernel /ipxe_images/systemrescue-9.01/SYSRESCCD/BOOT/X86_64/VMLINUZ initrd=SYSRESCCD.IMG repo=${base}  #
+#initrd /ipxe_images/systemrescue-9.01/SYSRESCCD/BOOT/INTEL_UCODE.IMG                                   #
+#initrd /ipxe_images/systemrescue-9.01/SYSRESCCD/BOOT/AMD_UCODE.IMG                                     #
+#initrd /ipxe_images/systemrescue-9.01/SYSRESCCD/BOOT/X86_64/SYSRESCCD.IMG                              #
+#########################################################################################################
+set base http://sccmpxe.local/systemrescue-9.01
+kernel http://sccmpxe.local/systemrescue-9.01/SYSRESCCD/BOOT/X86_64/VMLINUZ initrd=SYSRESCCD.IMG repo=${base}
+initrd http://sccmpxe.local/systemrescue-9.01/SYSRESCCD/BOOT/INTEL_UCODE.IMG
+initrd http://sccmpxe.local/systemrescue-9.01/SYSRESCCD/BOOT/AMD_UCODE.IMG
+initrd http://sccmpxe.local/systemrescue-9.01/SYSRESCCD/BOOT/X86_64/SYSRESCCD.IMG
+boot
+###################################################################################
+ 
+ 
+##################################Install-ESXi-6.7.0################################
+:Install-ESXi-6.7.0
+echo Install-ESXi-6.7.0
+kernel http://sccmpxe.local/Install-ESXi-6.7.0/EFI/BOOT/BOOTX64.EFI -c http://sccmpxe.local/Install-ESXi-6.7.0/EFI/BOOT/BOOT.CFG
+boot
+########################################################################################
+ 
+###############################Install-ESXi-6.7.0-HPE#######################################
+:Install-ESXi-6.7.0-HPE
+echo Install-ESXi-6.7.0-HPE
+kernel http://sccmpxe.local/Install-ESXi-6.7.0-HPE/EFI/BOOT/BOOTX64.EFI -c http://sccmpxe.local/Install-ESXi-6.7.0-HPE/EFI/BOOT/BOOT.CFG
+boot
+######################################################################################
+ 
+###############################Install-ESXi-7.0.2############################
+:Install-ESXi-7.0.2
+echo Install-ESXi-7.0.2
+kernel http://sccmpxe.local/Install-ESXi-7.0.2/EFI/BOOT/BOOTX64.EFI -c http://sccmpxe.local/Install-ESXi-7.0.2/EFI/BOOT/BOOT.CFG
+boot
+#############################################################################################
+ 
+#############################Install-ESXi-7.0.2-HPE###########################################
+:Install-ESXi-7.0.2-HPE
+echo Install-ESXi-7.0.2-HPE
+kernel http://sccmpxe.local/Install-ESXi-7.0.2-HPE/EFI/BOOT/BOOTX64.EFI -c http://sccmpxe.local/Install-ESXi-7.0.2-HPE/EFI/BOOT/BOOT.CFG
+boot
+###################################################################################################
