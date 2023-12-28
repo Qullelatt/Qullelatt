@@ -1,0 +1,9 @@
+
+XGVPP-NMH47-7TTHJ-W3FW7-8HV2C   win10 enterprise
+VK7JG-NPHTM-C97JM-9MPGT-3V66T     win 10 pro
+
+MediaCreationTool20H2.exe /Eula Accept /Retail /MediaArch x64 /MediaLangCode uk-UA /MediaEdition Enterprise
+
+Dism /Get-WimInfo /WimFile:C:\install.esd
+
+dism /export-image /SourceImageFile:C:\install.esd /SourceIndex:2 /DestinationImageFile:C:\install.wim /Compress:max /CheckIntegrity
