@@ -1,0 +1,109 @@
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+$Form = New-Object System.Windows.Forms.Form
+$Form.ClientSize = New-Object System.Drawing.Point(765, 475)
+$Form.text = "RDS_Allowed_Connection"
+$Form.TopMost = $false
+
+$Button1 = New-Object System.Windows.Forms.Button
+$Button1.text = "Choose Collection"
+$Button1.width = 126
+$Button1.height = 50
+$Button1.location = New-Object System.Drawing.Point(10, 8)
+$Button1.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+
+$Button3 = New-Object System.Windows.Forms.Button
+$Button3.text = "Allowed"
+$Button3.width = 100
+$Button3.height = 50
+$Button3.location = New-Object System.Drawing.Point(660, 8)
+$Button3.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+$Button3.BackColor = [System.Drawing.Color]::FromArgb(0,153,0)
+
+$Button4 = New-Object System.Windows.Forms.Button
+$Button4.text = "Declined"
+$Button4.width = 100
+$Button4.height = 50
+$Button4.location = New-Object System.Drawing.Point(560, 8)
+$Button4.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+$Button4.BackColor = [System.Drawing.Color]::FromArgb(204,0,0)
+    
+$ListBox = New-Object System.Windows.Forms.ListBox
+$ListBox.width = 750
+$ListBox.height = 200
+$ListBox.location = New-Object System.Drawing.Point(10, 60)
+$ListBox.Font = New-Object System.Drawing.Font('Times New Roman', 14)
+
+$listViewHosts = New-Object System.Windows.Forms.ListView
+$listViewHosts.Size = New-Object System.Drawing.Size(750, 200)
+$listViewHosts.Location = New-Object System.Drawing.Point(10, 270)
+$listViewHosts.View = [System.Windows.Forms.View]::Details
+$listViewHosts.FullRowSelect = $true
+$listViewHosts.Font = New-Object System.Drawing.Font('Times New Roman', 14)
+$listViewHosts.Columns.Add("Session Host", 450)
+$listViewHosts.Columns.Add("New Connection Allowed", 450)
+
+#$Button2 = New-Object System.Windows.Forms.Button
+#$Button2.text = "Get List Of Collection"
+#$Button2.width = 150
+#$Button2.height = 30
+#$Button2.location = New-Object System.Drawing.Point(10, 470)
+#$Button2.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+
+
+$sessionCollection = Get-RDSessionCollection -ConnectionBroker IO-NLB-Retail1.pup.local
+$sessionCollection | ForEach-Object {
+$listBox.Items.Add($_.CollectionName)
+}
+
+$Button1.Add_Click({
+    $listViewHosts.Items.Clear()
+
+    $selected = $listBox.SelectedItem
+    
+    $selected = $selected -replace 'Collection Name:\s+', ''
+
+    $session = Get-RDSessionHost -CollectionName $selected -ConnectionBroker IO-NLB-Retail1.pup.local
+
+
+           if ($session) {
+            foreach ($session in $session) {
+                $listViewHosts.Items.Add("$($session.SessionHost)").SubItems.Add("$($session.NewConnectionAllowed)")
+        }  
+    }
+})
+
+$Button3.Add_Click({
+        $RDShost = $listViewHosts.SelectedItems[0]
+            if ($RDShost -and $RDShost -is [System.Windows.Forms.ListViewItem]) {
+            $AccessOn = $RDShost.Text       
+                    $allowed = Set-RDSessionHost -SessionHost $AccessOn -NewConnectionAllowed Yes -ConnectionBroker "IO-NLB-Retail1.pup.local"
+                    if ($RDShost) {
+                        $RDShost.SubItems[1].Text = "Yes"
+            }
+     }
+
+})
+
+
+$Button4.Add_Click({
+        $RDShost = $listViewHosts.SelectedItems[0]
+            if ($RDShost -and $RDShost -is [System.Windows.Forms.ListViewItem]) {
+            $AccessOff = $RDShost.Text       
+                    $allowed = Set-RDSessionHost -SessionHost $AccessOff -NewConnectionAllowed No -ConnectionBroker "IO-NLB-Retail1.pup.local"
+                    if ($RDShost) {
+                        $RDShost.SubItems[1].Text = "No"
+            }
+     }
+
+})
+
+
+$Form.Controls.Add($Button1)
+$Form.Controls.Add($ListBox)
+$Form.Controls.Add($Button4)
+$Form.Controls.Add($Button3)
+$Form.Controls.Add($listViewHosts)
+
+$Form.ShowDialog()
