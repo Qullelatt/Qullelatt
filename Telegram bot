@@ -3,3 +3,4 @@ $tg_chat_id="-1001552826042"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $message= "‼ 🙏 Піздуй перевіряй СКС 🙏 ‼"
 $Response = Invoke-RestMethod -Uri "https://api.telegram.org/bot$($tg_token)/sendMessage?chat_id=$($tg_chat_id)&text=$($Message)&parse_mode=html"
+
