@@ -1,2 +1,3 @@
 wmic qfe list brief /format:table
 wusa /uninstall /kb:идентифікатор
+
