@@ -221,7 +221,9 @@ chain tftp://${next-server}/menu.ipxe || shell
 
 3.  Зібрати то все діло в 1 бут файл - make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe (за допопомогою ключа  EMBED=embed.ipxe ми вкомпіkюємо в ядро зарані створений скрипт embed.ipxe, потрібно для того щоб після завантаження по РХЕ бут файла ipxe64.efi - ядро передало управління на конфіг меню яке лежить в корні tftp - menu.ipxe)
 
+4. В console.h файлі включити підтримку зображень - #define    CONSOLE_FRAMEBUFFER
 
+5. Перед збіркою має лежати поруч рутовий сертифікат pup.local та конвертувати його – openssl x509 -inform der -in Root256.cer -outform pem -out Root256.pem
 
 https://ipxe.org/download
 
