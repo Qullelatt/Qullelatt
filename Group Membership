@@ -1,0 +1,13 @@
+$From = Read-Host -Prompt "From User"
+$to = Read-Host -Prompt "To User"
+$CopyFromUser = Get-ADUser -Identity $From -Properties MemberOf
+$Group = $CopyFromUser.MemberOf
+$confirmation = Read-Host "Do you want to Copy Group Membership from $From to $to ? Press 'y' to Proceed or any key to Cancel"
+if ($confirmation -eq 'y') {
+    $Group | Add-ADGroupMember -Members $to
+    clear
+    echo "($From) User's Group Memership  has been Copied to User  ($to)"
+Pause
+}
+else {
+Write-Host 'Task Cancelled'
