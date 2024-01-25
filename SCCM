@@ -1,0 +1,98 @@
+1. Скачать и распаковать SCCM
+
+https://www.microsoft.com/ru-ru/evalcenter/evaluate-system-center-configuration-manager-and-endpoint-protection
+
+System Center Configuration Manager and Endpoint Protection (текущая версия – версия 1902)
+
+2. Скачать Windows ADK
+3. Через ADSI в CN=System создать контейнер с именем " System Management "
+(нужен для публикации информации о сайт сервере для клиентов, что бы клиент собирал информацию о настройках сервера SCCM, например: если изменится конфигурация сервера SCCM - не бегать и не прособирать руцями клиент на каждом ПК.)
+4. В AD делегировать управление контейнером " System Management " на сервер SCCM
+5. Для того что бы SCCM смог публиковать информацию о себе в AD нужно расширить схему AD.
+В распакованном архиве SCCM путь: C:\..\SC_Configmgr_SCEP_1902\SMSSETUP\BIN\X64 открыть с CMD файл " extadsch " (Делается на контроллере домена)
+В корне C:\ в логе ExADSch удостоверится что схема успешно расширена
+
+6. Задать роли и features серверу SCCM
+Роли:
+- WEB Server (IIS)
+- Windows Deployment Services
+- Windows Server Update Services
+- Data Deduplication
+- File Server
+Features:
+- NET Framework 3.5 (FULL)
+- NET Framework 4.7
+ASP.NET 4.7
+HTTP Activation
+TCP Port Sharing
+- BITS
+- BranchCache
+- Remote Differential Compression
+7. Запускаем сетап ADK в меню выбираем загрузить патч в нужную нам папку, скачает около 6-7 Гб, снова открываем сетап ADK и указываем путь куда скачал патч.
+Выбрать для установки:
+- Deployment Tools
+- ICD
+- Configuration Designer
+- USMT
+8. Скачать и установить Windows PE add-on for the ADK
+9. В корне диска "C" создаем файл no_sms_on_drive.sms (нужен для того что бы сервер sccm не использовал диск для развертывание ПО)
+10. Сошлись звезды в фазу луны в созвездии Козерога так что нужно подымать MSSQL Server на отдельно или этой же машине рядом с SCCM.
+Роли SQL:
+- Database Engine Services
+- Full-Text and Semantic Extrations
+- Reporting Services - Native
+Сортировка должна быть: SQL_Latin_General_CP1_CI_AS
+
+instance - оставил дефолтный
+
+
+Служба SQL Server должна запускать под учеткой Local System
+Обновить sql server native client
+
+11. Запуcкаем сетап SCCM
+- Обычная инсталляция ( Install a Configuration Manager primary site )
+- Ключ: BXH69-M62YX-QQD6R-3GPWX-8WMFY
+- Запросит скачать и установить манифест автоматически или загрузить только манифест, сначала скачал манифест потом указал где он лежит.
+- Язык для консоли и отчетов: en и ru
+- Код сайта, может состоят из 3х символов, в моем случае " ROZ "
+- Название сайта: Config_Managger
+- по сколько это первая инсталяция и мы не присоединяем к другой иерархии- выбрать stand-alone-site
+- Выбрать SQL сервер, в моем случае fqdn: sccm.pup.local . порт - 4022, instance оставили дефолтный
+- Выбрать путь к логам sql и файлу БД
+- SMS Provider (прослойка между консолькой sccm и базой sccm, определяет какой пользователь открывает консоль и какие права него есть в базе sccm)
+У меня по дефолту sccm.pup.local
+- Выбрал HTPP для подключение клиентов
+- Выбрать установку magemet point и distribution point
+Далее установка проверяет все ли у тебя ОК с настройками, показывает какие траблы есть, решаем и run check
+
+12. Первоначальная самая простоя настройка SCCM
+- Открываем консоль SCCM, переходим в \Administration\Overview\Hierarchy Configuration\Discovery Methods
+Настраиваем методы обнаружения по которым сервер SCCM будет видеть клиентов. Включил: Обнаружение систем в AD, обнаружения пользователей в AD, обнаружение групп в AD, Обнаружение в лесах AD, heartbeat-обнаружение
+Пример для обнаружения пользователей: LDAP://OU=Office,OU=People,DC=pup,DC=local
+И настраиваем по какому расписанию он будет пересматривать наш AD на наличие новых ресурсов.
+- Определить границы в которых будет работать SCCM
+\Administration\Overview\Hierarchy Configuration\Boundaries
+Если включен метод обнаружение Обнаружение в лесах AD - граница default-first-site создается автоматически, можем ее редактировать
+Мои настройки этой границы:
+описание: pup.local/Default-First-Site-Name
+Тип: Site AD (можно выставить так же на IP-подсеть, префикс IPv6, диапазон IP)
+Система сайта: sccm.pup.local
+Группы границ: PUP.LOCAL Boundary Group AD
+
+Граница НЕ вступит в силу пока она не включена в группу границ
+-создаем группу границ \Administration\Overview\Hierarchy Configuration\Boundary Groups
+- добавляем в нее ранее создана границу
+- сервер системы сайта: \\sccm.pup.local
+- Назначаем сайт - ROZ-Config_manager
+- Использовать эту группу границ для назначение сайта - true
+- Разрешить загрузку с одноранговых узлов в этой группе
+13. Включение точки управления
+\Administration\Overview\Site Configuration\Servers and Site System Roles
+Даем роль серверу: указать учетку для инсталляции ( по сколько мы ставим точку на сервер то оставляем учетку сервера)
+- выбираем роль: management point
+- HTTP
+- Generate alert when the management point is not healthy
+- Параметры по БД оставить по дефолту
+
+14. Убедится в том что SCCM опубликовал о себе информацию в АД, контейнер - System Management
+Убедится что ресурсы были найдены \Assets and Compliance\Overview\Devices
