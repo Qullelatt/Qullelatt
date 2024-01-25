@@ -6,3 +6,4 @@
 	New-ItemProperty -Path "HKCU:\Software\Microsoft\VPN" -Name AutoCreate -Value 1 -PropertyType String
 
 #}
+a
