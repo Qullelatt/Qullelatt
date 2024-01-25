@@ -1,0 +1,8 @@
+$userdirs = Get-ChildItem "C:\Users" #папки пользователей
+    foreach ($userdir in $userdirs){
+    $userdesktopdirs = $userdir.Fullname+"\"+"Desktop"
+    $filenames = Get-ChildItem $userdesktopdirs -include *.txt -recurse
+        foreach ($filename in $filenames) {
+            Move-Item -LiteralPath $filename.FullName -Destination $computerdir -Force -Verbose
+        }
+    }
