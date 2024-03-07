@@ -1,0 +1,31 @@
+$bit = Get-BitLockerVolume
+$tpmPinProtectors = $bit.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'TpmPin' }
+if ($tpmPinProtectors) {
+    $PIN = 'TpmPin'
+} else {
+    $PIN = 'NoPin'
+}
+
+$hash = @{'KeyProtector' = $PIN}
+return $hash | ConvertTo-Json -Compress
+
+==========================================================================================
+
+{
+    "Rules": [
+        {
+            "SettingName":"KeyProtector",
+            "Operator":"IsEquals",
+            "DataType":"String",
+			"Operand":"TpmPin",
+			"MoreInfoUrl":"https://www.youtube.com/watch?v=AzttJak_Rqs&ab_channel=MSFTWebCast",
+            "RemediationStrings": [
+                {
+                    "Language":"en_US",
+                    "Title":"PIN is off",
+                    "Description":"Add PIN to Bitlocker"
+                }
+            ]
+        }
+    ]
+}
