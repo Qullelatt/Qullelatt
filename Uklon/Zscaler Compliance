@@ -1,0 +1,25 @@
+$Zxc = Get-Package -Name 'Zscaler' -ProviderName 'Programs' -ErrorAction SilentlyContinue
+$Zscaler = $Zxc.Version
+$hash = @{'Version' = $Zscaler}
+return $hash | ConvertTo-Json -Compress
+
+========================================================================================
+
+{
+    "Rules": [
+        {
+            "SettingName": "Version",
+            "Operator": "GreaterEquals",
+            "DataType": "Version",
+            "Operand": "4.3.0.188",
+            "MoreInfoUrl": "https://google.com",
+            "RemediationStrings": [
+                {
+                    "Language": "en_US",
+                    "Title": "Bad Version",
+                    "Description": "Update"
+                }
+            ]
+        }
+    ]
+}
